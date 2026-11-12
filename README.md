@@ -236,9 +236,11 @@ the six configurations and is not included.
 **Verification status.** On a 10 000-vector GloVe subset, two runs of the original code and one of the port produce byte-identical
 Faiss indexes and identical recall and candidate counts for IVF and IVFPQ+R. HNSW and LIRA differ from run to run: between the two
 original runs by up to 0.0064 recall@10 (HNSW) and 0.00024 recall@100 (LIRA), between the port and the originals by up to 0.004 and
-0.0004. BLISS and BLISS-KMeans cannot be compared run against run, because of the unseeded initialisation; instead, one trained
-router checkpoint was fed to the original and to the port, and the lists, assignments, recall and candidate counts came out identical
-(the TensorFlow training function itself is unchanged but was not part of this comparison). Full-size reruns: pending.
+0.0004. The TensorFlow initialisation of BLISS is not seeded in the original code (ported unchanged), so a rerun trains different
+weights and BLISS and BLISS-KMeans cannot be compared run against run; rerun recall for BLISS varies like its published seed spread
+(up to 0.039 recall@10 on SIFT across the three recorded seeds). Given the same trained checkpoint, the ported code reproduces the
+original's lookups and assignments byte for byte and its recall and candidate counts exactly (the TensorFlow training function itself
+is unchanged but was not part of this comparison). Full-size reruns: pending.
 
 ## Data
 
