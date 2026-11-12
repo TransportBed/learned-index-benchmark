@@ -1,0 +1,11 @@
+# outputs of reproduce.py
+out/
+
+# downloaded corpora (python download.py)
+data/corpora/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

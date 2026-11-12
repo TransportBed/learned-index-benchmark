@@ -1,0 +1,4 @@
+numpy>=1.24
+pandas>=2.0
+h5py>=3.8        # step 2: reading the downloaded corpora
+matplotlib>=3.7  # --figures only

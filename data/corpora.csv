@@ -1,0 +1,5 @@
+corpus,vectors,dim,distance,queries,queries_in_file,ivf_lists
+Deep10M,9990000,96,cosine,10000,10000,4096
+GloVe,1183514,100,cosine,1000,10000,1024
+SIFT,1000000,128,l2,10000,10000,1024
+GIST,1000000,960,l2,1000,1000,1024
