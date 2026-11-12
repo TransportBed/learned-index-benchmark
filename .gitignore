@@ -9,3 +9,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# build outputs and run products of scripts/run_paper.sh
+build/
+_skbuild/
+*.so
+logs/
+exports/

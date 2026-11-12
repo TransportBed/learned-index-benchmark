@@ -10,6 +10,8 @@ show: whether the methods reach a common recall at all, how full their lists are
 This repository holds the measurements and a script, [`reproduce.py`](reproduce.py), that recomputes every number
 on the poster and in the 3-page paper from them.
 
+`reproduce.py` recomputes every reported number from the recorded measurements; the code in `src/`, `cpp/`, `bindings/` and `scripts/` re-runs the methods themselves.
+
 ```bash
 pip install -r requirements.txt
 python reproduce.py                        # all 223 values, in seconds
@@ -176,8 +178,67 @@ for the initialization control.
 3. **Figures** (`--figures`): redraws [`figures/recall.png`](figures/recall.png) and
    [`figures/occupancy.png`](figures/occupancy.png).
 
-The exit status is 0 when everything matches, 1 when a value differs, and 2 when the setup is incomplete. Rebuilding
-the indexes themselves is not part of this repository; the measurements in `data/` are the inputs.
+The exit status is 0 when everything matches, 1 when a value differs, and 2 when the setup is incomplete.
+
+## Repository layout
+
+| Folder / file | Holds |
+|---|---|
+| `data/`, `figures/`, `reproduce.py`, `download.py` | the recorded measurements, the plots, and the scripts that recompute every reported number from them |
+| `src/` | the Python drivers (`cli_run_router_methods.py`, `cli_run_competitiveness.py`), the shared measurement harness, and `methods/` with the Faiss baselines (`faiss_baselines.py`), BLISS (`bliss.py`, `routers.py`) and LIRA (`lira.py`, `lira_runtime.py`) |
+| `cpp/`, `bindings/`, `CMakeLists.txt`, `pyproject.toml` | the native exact-search module used by BLISS and BLISS-KMeans (C++17, OpenMP, pybind11) and its build |
+| `scripts/` | `run_paper.sh`, the campaign driver, and `smoke_glove10k.sh`, a small end-to-end check |
+| `env/` | the pinned environment that ran the campaign |
+
+## Running the methods
+
+This is the code that produced the measurements in `data/`, unchanged except for removed unrelated code and renamed identifiers.
+It covers six configurations: HNSW, IVF, IVFPQ+R, BLISS, BLISS-KMeans and LIRA. BLISS and LIRA are implementations from their
+papers, not the authors' code.
+
+**Environment and build.** The campaign ran on Python 3.12.12 in the environment pinned in [`env/requirements-lock.txt`](env/requirements-lock.txt)
+(`env/environment.yml` creates it from conda-forge). `scripts/run_paper.sh` builds the native module with CMake (Release, `-march=native`)
+into `build/` and copies the shared library next to the Python sources; both are git-ignored.
+
+```bash
+conda env create -p ./work/env -f env/environment.yml      # or: pip install -r env/requirements-lock.txt
+export PYTHON_BIN=$PWD/work/env/bin/python
+```
+
+**Smoke test** (10 000 GloVe vectors, one seed, about five minutes). The subset is prepared from `data/corpora/glove-100-angular.hdf5`
+(`python download.py` fetches it); the campaign script does not prepare data itself:
+
+```bash
+mkdir -p /path/to/root/data/glove && ln -s $PWD/data/corpora/glove-100-angular.hdf5 /path/to/root/data/glove/
+(cd src && PYTHONPATH=. $PYTHON_BIN -m datasets glove10k --data-root /path/to/root/data --download)
+bash scripts/run_paper.sh --smoke --no-tmux --skip-preflight-smoke \
+  --data-root /path/to/root/data --experiments-root /path/to/root/experiments --out-root /path/to/root/exports
+```
+
+**Full campaign** (four corpora and the original seeds; about 100 hours of stage time on the original hardware):
+
+```bash
+bash scripts/run_paper.sh --datasets glove,sift,gist,deep1m \
+  --data-root <prepared data> --experiments-root <fresh dir> --out-root <fresh dir>
+```
+
+**What a run produces.** One directory per run cell under `--experiments-root`
+(`<corpus>/<method>__seed<k>/<operating point>__<hash>/`) holding the index or model files, `competitiveness_summary.json` or
+`query_sweep.json` (recall@1/10/100, scored candidates, timings, serving footprint) and per-query CSVs. The drivers also write
+`initialization/` and `competitiveness/` summary tables under `--out-root`; logs go to `logs/`.
+
+**Reading the results.** Timings depend on the machine; the original hardware was a dual-socket AMD EPYC 9124 with 32 cores.
+HNSW and LIRA build HNSW graphs on several threads, so a rebuild can differ slightly: two original runs differed by up to
+0.0065 recall@10. The original code initialises the BLISS routers without a fixed seed and this is kept unchanged, so BLISS and
+BLISS-KMeans cells are not bit-reproducible either. The original campaign also ran a codes-only IVFPQ variant; it is not one of
+the six configurations and is not included.
+
+**Verification status.** On a 10 000-vector GloVe subset, two runs of the original code and one of the port produce byte-identical
+Faiss indexes and identical recall and candidate counts for IVF and IVFPQ+R. HNSW and LIRA differ from run to run: between the two
+original runs by up to 0.0064 recall@10 (HNSW) and 0.00024 recall@100 (LIRA), between the port and the originals by up to 0.004 and
+0.0004. BLISS and BLISS-KMeans cannot be compared run against run, because of the unseeded initialisation; instead, one trained
+router checkpoint was fed to the original and to the port, and the lists, assignments, recall and candidate counts came out identical
+(the TensorFlow training function itself is unchanged but was not part of this comparison). Full-size reruns: pending.
 
 ## Data
 

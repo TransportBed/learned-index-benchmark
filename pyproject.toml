@@ -1,0 +1,42 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "learned-index-benchmark"
+version = "2.0.0"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "h5py>=3.10",
+  "pandas>=2.2",
+  "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+faiss = ["faiss-cpu>=1.9.0"]
+bliss = [
+  "tensorflow>=2.15,<2.18",
+  "cython>=0.29.36",
+]
+lira = ["torch>=2.2"]
+dev = [
+  "build>=1.2",
+  "pytest>=8.0",
+  "ruff>=0.4",
+  "tomli>=2.0; python_version<'3.11'",
+]
+
+[project.scripts]
+lisbench-competitiveness = "cli_run_competitiveness:main"
+
+# The native serving backend (lisbench_native) and all Python sources are
+# installed by CMake (see CMakeLists.txt); scikit-build-core's own package
+# auto-detection is disabled so the flat src/ layout is installed verbatim.
+[tool.scikit-build]
+minimum-version = "0.9"
+build-dir = "build/{wheel_tag}"
+wheel.packages = []
+sdist.include = ["src", "cpp", "bindings", "CMakeLists.txt"]
+
